@@ -1,0 +1,55 @@
+✅ Pub/Sub stands for 'publish-subscribe'
+
+This pattern addresses the idea that the disparate parts of your application shouldn't know about one another. Why is that? It makes it a lot easier to see what's going on in general if various parts are separated. It also makes it easier to suddenly change behavior if you need to. How do we accomplish this? We do this by establishing some concepts:
+
+message: A message is usually a text string accompanied by an optional payload (a piece of data that clarifies what the message is about). A typical message in a game can be KEY_PRESSED_ENTER.
+publisher: This element publishes a message and sends it out to all subscribers.
+subscriber: This element listens to specific messages and carries out some task as the result of receiving this message, such as firing a laser.
+The implementation is quite small in size but it's a very powerful pattern. Here's how it can be implemented:
+
+//set up an EventEmitter class that contains listeners
+class EventEmitter {
+  constructor() {
+    this.listeners = {};
+  }
+//when a message is received, let the listener to handle its payload
+  on(message, listener) {
+    if (!this.listeners[message]) {
+      this.listeners[message] = [];
+    }
+    this.listeners[message].push(listener);
+  }
+//when a message is sent, send it to a listener with some payload
+  emit(message, payload = null) {
+    if (this.listeners[message]) {
+      this.listeners[message].forEach(l => l(message, payload))
+    }
+  }
+}
+To use the above code we can create a very small implementation:
+
+//set up a message structure
+const Messages = {
+  HERO_MOVE_LEFT: 'HERO_MOVE_LEFT'
+};
+//invoke the eventEmitter you set up above
+const eventEmitter = new EventEmitter();
+//set up a hero
+const hero = createHero(0,0);
+//let the eventEmitter know to watch for messages pertaining to the hero moving left, and act on it
+eventEmitter.on(Messages.HERO_MOVE_LEFT, () => {
+  hero.move(5,0);
+});
+
+//set up the window to listen for the keyup event, specifically if the left arrow is hit, emit a message to move the hero left
+window.addEventListener('keyup', (evt) => {
+  if (evt.key === 'ArrowLeft') {
+    eventEmitter.emit(Messages.HERO_MOVE_LEFT)
+  }
+});
+Above we connect a keyboard event, ArrowLeft and send the HERO_MOVE_LEFT message. We listen to that message and move the hero as a result. The strength with this pattern is that the event listener and the hero don't know about each other. You can remap the ArrowLeft to the A key. Additionally it would be possible to do something completely different on ArrowLeft by making a few edits to the eventEmitter's on function:
+
+eventEmitter.on(Messages.HERO_MOVE_LEFT, () => {
+  hero.move(5,0);
+});
+As things gets more complicated when your game grows, this pattern stays the same in complexity and your code stays clean. It's really recommended to adopt this pattern.
