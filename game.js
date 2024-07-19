@@ -21,9 +21,17 @@ class Movable extends GameObject {
     }
 
     moveTo(x, y) {
-        this.x = x;
-        this.y = y;
-        this.render();
+        // Ensure the new position is within the boundaries of the game container
+        const maxX = 29; // Assuming the game container is 600px wide (600 / 20 - 1)
+        const maxY = 19; // Assuming the game container is 400px high (400 / 20 - 1)
+
+        if (x >= 0 && x <= maxX && y >= 0 && y <= maxY) {
+            this.x = x;
+            this.y = y;
+            this.render();
+        } else {
+            console.log('Movement out of bounds:', { x, y }); // Added logging for out-of-bounds movement
+        }
     }
 }
 
@@ -76,12 +84,13 @@ const enemy = new Enemy(5, 5);
 const tree = new Tree(2, 2);
 
 eventEmitter.on(Messages.HERO_MOVE, (message, { x, y }) => {
+    const previousX = hero.x; // Store previous position
+    const previousY = hero.y; // Store previous position
+
     hero.moveTo(x, y);
-    if (hero.x === enemy.x && hero.y === enemy.y) {
-        eventEmitter.emit(Messages.COLLISION, { with: 'Enemy' });
-    }
-    if (hero.x === tree.x && hero.y === tree.y) {
-        eventEmitter.emit(Messages.COLLISION, { with: 'Tree' });
+
+    if (checkCollisions()) { // If collision detected, revert to previous position
+        hero.moveTo(previousX, previousY); // Revert position on collision
     }
 });
 
@@ -89,21 +98,41 @@ eventEmitter.on(Messages.COLLISION, (message, payload) => {
     console.log(`Collision with ${payload.with}`);
 });
 
+function checkCollisions() {
+    let collision = false;
+
+    if (hero.x === enemy.x && hero.y === enemy.y) {
+        eventEmitter.emit(Messages.COLLISION, { with: 'Enemy' });
+        collision = true;
+    }
+    if (hero.x === tree.x && hero.y === tree.y) {
+        eventEmitter.emit(Messages.COLLISION, { with: 'Tree' });
+        collision = true;
+    }
+
+    return collision; // Return true if a collision is detected
+}
+
 window.addEventListener('keyup', (evt) => {
+    let newX = hero.x;
+    let newY = hero.y;
+
     switch (evt.key) {
         case 'ArrowLeft':
-            eventEmitter.emit(Messages.HERO_MOVE, { x: hero.x - 1, y: hero.y });
+            newX = hero.x - 1;
             break;
         case 'ArrowRight':
-            eventEmitter.emit(Messages.HERO_MOVE, { x: hero.x + 1, y: hero.y });
+            newX = hero.x + 1;
             break;
         case 'ArrowUp':
-            eventEmitter.emit(Messages.HERO_MOVE, { x: hero.x, y: hero.y - 1 });
+            newY = hero.y - 1;
             break;
         case 'ArrowDown':
-            eventEmitter.emit(Messages.HERO_MOVE, { x: hero.x, y: hero.y + 1 });
+            newY = hero.y + 1;
             break;
     }
+
+    eventEmitter.emit(Messages.HERO_MOVE, { x: newX, y: newY });
 });
 
 // Initial rendering
